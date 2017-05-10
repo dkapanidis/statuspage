@@ -1,0 +1,8 @@
+version: '3'
+services:
+  backend:
+    build: backend
+    ports:
+      - "8081:80"
+    environment:
+      - TARGET_URL=http://192.168.0.155:8080
