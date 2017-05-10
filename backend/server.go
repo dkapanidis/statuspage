@@ -7,13 +7,23 @@ import (
     "log"
     "math/rand"
     "time"
+    "encoding/json"
 )
 
 var coin int
 var target_url string = os.Getenv("TARGET_URL")
+var d Data
 
-var coin_ok int = 0
-var coin_fail int = 0
+type Payload struct {
+    Stuff Data
+}
+type Data struct {
+    StatusCodes StatusCodes
+}
+type StatusCodes map[string]int
+type Vegetables map[string]int
+
+var coins Data
 
 func serveHTTP(w http.ResponseWriter, r *http.Request) {
   if (coin == 1) {
@@ -25,11 +35,48 @@ func serveHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func metrics(w http.ResponseWriter, r *http.Request) {
-  w.Write([]byte("{coin_ok: " + coin_ok + ", coin_fail: 4}"))
+  response, err := getJsonResponse();
+  if err != nil {
+      panic(err)
+  }
+  fmt.Fprintf(w, string(response))
+}
+
+func getJsonResponse()([]byte, error) {
+  p := Payload{d}
+    return json.MarshalIndent(p, "", "  ")
 }
 
 var netClient = &http.Client{
   Timeout: time.Second * 10,
+}
+
+func doSomething(s string) {
+  fmt.Println("doing something", s)
+}
+
+func polling() {
+  for {
+    <-time.After(1 * time.Second)
+    stressTest()
+  }
+}
+
+func stressTest() {
+  statusCodes := make(map[string]int)
+  statusCodes["20x"] = 0
+  statusCodes["50x"] = 0
+  for i := 1; i <= 100; i++ {
+    response, _ := netClient.Get(target_url)
+    if (response.StatusCode == 500) {
+      statusCodes["20x"]++
+    } else {
+      statusCodes["50x"]++
+    }
+
+  }
+  jsn, _ := json.MarshalIndent(statusCodes, "", "  ")
+  fmt.Println(string(jsn))
 }
 
 func main() {
@@ -37,11 +84,18 @@ func main() {
     http.HandleFunc("/metrics", metrics)
     rand.Seed( time.Now().UnixNano())
     coin = rand.Intn(2)
+    statusCodes := make(map[string]int)
+    statusCodes["20x"] = 25
+    statusCodes["50x"] = 10
+    d = Data{statusCodes}
+
     fmt.Println(coin)
     fmt.Println("TARGET_URL: ", target_url)
     response, foo := netClient.Get(target_url)
+    fmt.Println(response.StatusCode)
     fmt.Println(response)
     fmt.Println(foo)
+    go polling()
     err := http.ListenAndServe(":80", nil) // set listen port
     if err != nil {
         log.Fatal("ListenAndServe: ", err)
