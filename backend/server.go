@@ -2,59 +2,61 @@ package main
 
 import (
     "fmt"
-    "os"
     "net/http"
     "log"
-    "math/rand"
     "time"
     "encoding/json"
 )
 
 var coin int
-var target_url string = os.Getenv("TARGET_URL")
+// var target_url string = os.Getenv("TARGET_URL")
+var target_url string = "http://192.168.0.155:8080"
 var d Data
 
 type Payload struct {
     Stuff Data
 }
+
+var output = make([]map[string]int, 100)
+
+/* */
 type Data struct {
     StatusCodes StatusCodes
 }
+
 type StatusCodes map[string]int
 type Vegetables map[string]int
 
-var coins Data
+type Snapshots []Snapshot
 
-func serveHTTP(w http.ResponseWriter, r *http.Request) {
-  if (coin == 1) {
-    w.Write([]byte("200 - You are a lucky lucky guy!"))
-  } else {
-    w.WriteHeader(http.StatusInternalServerError)
-    w.Write([]byte("500 - Bad luck, try flipping the coin again!"))
-  }
+type Snapshot struct {
+  R200 int `json:"r200"`
+  R500 int `json:"r500"`
 }
+
+var coins Data
+var snapshots Snapshots
 
 func metrics(w http.ResponseWriter, r *http.Request) {
-  response, err := getJsonResponse();
-  if err != nil {
-      panic(err)
-  }
-  fmt.Fprintf(w, string(response))
-}
+  // response, err := getJsonResponse();
+  // if err != nil {
+      // panic(err)
+  // }
+  json.NewEncoder(w).Encode(snapshots)
 
-func getJsonResponse()([]byte, error) {
-  p := Payload{d}
-    return json.MarshalIndent(p, "", "  ")
+  // w.Header().Set("Content-Type", "application/json")
+  // v,err := json.Marshal(fmt.Sprintf("%+v", timeseries))
+  // fmt.Printf("TS %+v\n", v)
+  // fmt.Printf("ERR %+v\n", err)
+  // // fmt.Fprintf(w, fmt.Sprintf("%+v\n", timeseries))
+  // fmt.Fprintf(w, string(v))
 }
 
 var netClient = &http.Client{
   Timeout: time.Second * 10,
 }
 
-func doSomething(s string) {
-  fmt.Println("doing something", s)
-}
-
+// Each second run stressTest
 func polling() {
   for {
     <-time.After(1 * time.Second)
@@ -62,42 +64,33 @@ func polling() {
   }
 }
 
+// Run 100 cycles and collect snapshot
 func stressTest() {
-  statusCodes := make(map[string]int)
-  statusCodes["20x"] = 0
-  statusCodes["50x"] = 0
+  snapshot := Snapshot{R200:0, R500:0}
   for i := 1; i <= 100; i++ {
     response, _ := netClient.Get(target_url)
-    if (response.StatusCode == 500) {
-      statusCodes["20x"]++
+    if (response != nil && response.StatusCode == 500) {
+      snapshot.R200++
     } else {
-      statusCodes["50x"]++
+      snapshot.R500++
     }
-
   }
-  jsn, _ := json.MarshalIndent(statusCodes, "", "  ")
-  fmt.Println(string(jsn))
+  snapshots = append(snapshots, snapshot)
+  fmt.Printf("%+v\n", snapshot)
+  fmt.Printf("%+v\n", snapshots)
+
 }
 
 func main() {
-    http.HandleFunc("/", serveHTTP)
-    http.HandleFunc("/metrics", metrics)
-    rand.Seed( time.Now().UnixNano())
-    coin = rand.Intn(2)
-    statusCodes := make(map[string]int)
-    statusCodes["20x"] = 25
-    statusCodes["50x"] = 10
-    d = Data{statusCodes}
+  // Handlers
+  http.HandleFunc("/", metrics)
 
-    fmt.Println(coin)
-    fmt.Println("TARGET_URL: ", target_url)
-    response, foo := netClient.Get(target_url)
-    fmt.Println(response.StatusCode)
-    fmt.Println(response)
-    fmt.Println(foo)
-    go polling()
-    err := http.ListenAndServe(":80", nil) // set listen port
-    if err != nil {
-        log.Fatal("ListenAndServe: ", err)
-    }
+  // Activate Polling
+  go polling()
+
+  // Start Listener
+  err := http.ListenAndServe(":8081", nil) // set listen port
+  if err != nil {
+      log.Fatal("ListenAndServe: ", err)
+  }
 }
