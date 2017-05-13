@@ -11,24 +11,44 @@
   <link href="https://netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.css" rel="stylesheet" type="text/css">
   <link href="bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" type="text/css">
 </head>
+
 <body>
-<div class="col-lg-7 text-center" id="fake_users1" data-mg-uid="mg-0"></div>
+  <div class="col-lg-14 text-center" id="status_diagram" data-mg-uid="mg-0"></div>
 </body>
+
 <script>
-d3.json('data/fake_users1.json', function(data) {
-    data = MG.convert.date(data, 'date');
+
+function runFunction() {
+d3.json('/metrics', function(data) {
+    data = MG.convert.date(data, 'date', '%Y-%m-%dT%H:%M:%S.%L%L%L%Z');
+
     MG.data_graphic({
-        title: "Line Chart",
-        description: "This is a simple line chart. You can remove the area portion by adding area: false to the arguments list.",
+        title: "Status Page",
         data: data,
-        width: 600,
-        height: 200,
+        width: 1024,
+        interpolate: d3.curveLinear,
+        y_extended_ticks: true,
+        height: 600,
         right: 40,
-        target: document.getElementById('fake_users1'),
+        max_y: 1,
+        format: 'percentage',
+        area: false,
+        color: '#333',
+        animate_on_load: false,
+        target: document.getElementById('status_diagram'),
         x_accessor: 'date',
         y_accessor: 'value'
     });
 });
+}
+
+// runFunction()
+var t=setInterval(runFunction,1000);
 </script>
+<style>
+.mg-main-line {
+  stroke-width: 2px !important;
+}
+</style>
 
 </html>

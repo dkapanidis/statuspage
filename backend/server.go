@@ -8,12 +8,11 @@ import (
 )
 
 // var target_url string = os.Getenv("TARGET_URL")
-var target_url string = "http://192.168.0.155:8080"
+var target_url string = "http://127.0.0.1:8080"
 
 /** Agggregated snapshot information of one second **/
 type Snapshot struct {
-  R200 int `json:"r200"`
-  R500 int `json:"r500"`
+  Value float64 `json:"value"`
   Date time.Time `json:"date"`
 }
 
@@ -40,27 +39,28 @@ func polling() {
 
 // Run 100 cycles and collect snapshot
 func stressTest() {
-  snapshot := Snapshot{R200:0, R500:0, Date: time.Now()}
+  var counter float64 = 0
   for i := 1; i <= 100; i++ {
     response, _ := netClient.Get(target_url)
-    if (response != nil && response.StatusCode == 500) {
-      snapshot.R200++
-    } else {
-      snapshot.R500++
+    if (response != nil && response.StatusCode == 200) {
+      counter++
     }
   }
+  snapshot := Snapshot{Value:counter/100, Date: time.Now()}
   snapshots = append(snapshots, snapshot)
 }
 
 func main() {
   // Handlers
-  http.HandleFunc("/", metrics)
+  fs := http.FileServer(http.Dir("static"))
+  http.Handle("/", fs)
+  http.HandleFunc("/metrics", metrics)
 
   // Activate Polling
   go polling()
 
   // Start Listener
-  err := http.ListenAndServe(":8081", nil) // set listen port
+  err := http.ListenAndServe(":9000", nil) // set listen port
   if err != nil {
       log.Fatal("ListenAndServe: ", err)
   }
