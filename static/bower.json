@@ -1,0 +1,20 @@
+{
+  "name": "frontend",
+  "description": "",
+  "main": "",
+  "license": "MIT",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "jquery": "^3.2.1",
+    "metrics-graphics": "^2.11.0",
+    "font-awesome": "fontawesome#^4.7.0"
+  }
+}
