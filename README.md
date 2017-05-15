@@ -1,6 +1,6 @@
 # Status Page
 
-Status Page is a container that help visualize the availabilty of a service in graphical web interface.
+Status Page is a container that help visualize the availability of a service in graphical web interface.
 
 This is a small tool prepared for the presentation at RigaDevDays.
 
